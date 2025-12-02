@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель - Анализатор договоров</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="header">
+        <h1>Админ-панель</h1>
+        <div class="user-info">
+            <span id="username-display"></span>
+            <a href="/static/index.html" class="btn btn-secondary">Анализ договоров</a>
+            <button onclick="logout()" class="btn btn-secondary">Выйти</button>
+        </div>
+    </div>
+
+    <div class="container admin-container">
+        <div class="tabs">
+            <button class="tab-button active" onclick="showTab('users')">Пользователи</button>
+            <button class="tab-button" onclick="showTab('prompts')">Промпты</button>
+            <button class="tab-button" onclick="showTab('llm')">Настройки LLM</button>
+            <button class="tab-button" onclick="showTab('settings')">Система</button>
+            <button class="tab-button" onclick="showTab('stats')">Статистика</button>
+            <button class="tab-button" onclick="showTab('logs')">Логи</button>
+        </div>
+
+        <div id="users-tab" class="tab-content active">
+            <h2>Управление пользователями</h2>
+            <div id="users-list"></div>
+            <button onclick="showCreateUserForm()" class="btn btn-primary">Создать пользователя</button>
+        </div>
+
+        <div id="prompts-tab" class="tab-content">
+            <h2>Управление промптами</h2>
+            <div id="prompts-content"></div>
+        </div>
+
+        <div id="llm-tab" class="tab-content">
+            <h2>Настройки LLM</h2>
+            <div id="llm-config"></div>
+        </div>
+
+        <div id="settings-tab" class="tab-content">
+            <h2>Настройки системы</h2>
+            <div id="settings-content"></div>
+        </div>
+
+        <div id="stats-tab" class="tab-content">
+            <h2>Статистика использования токенов</h2>
+            <div id="stats-content"></div>
+        </div>
+
+        <div id="logs-tab" class="tab-content">
+            <h2>Логи системы</h2>
+            <div id="logs-content"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script src="/static/js/admin.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', initAdmin);
+    </script>
+</body>
+</html>

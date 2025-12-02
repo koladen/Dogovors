@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анализатор договоров</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>Анализатор договоров</h1>
+        <div class="user-info">
+            <span id="username-display"></span>
+            <button onclick="logout()" class="btn btn-secondary">Выйти</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="upload-section">
+            <h2>Загрузить договор для анализа</h2>
+
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="file">Выберите файл (.doc, .docx, .pdf):</label>
+                    <input type="file" id="file" name="file" accept=".doc,.docx,.pdf" required>
+                    <span id="file-name"></span>
+                </div>
+
+                <div class="form-group">
+                    <label>Тип анализа:</label>
+                    <div class="radio-group">
+                        <label>
+                            <input type="radio" name="analysis_type" value="summary" checked>
+                            Детальная выжимка договора
+                        </label>
+                        <label>
+                            <input type="radio" name="analysis_type" value="legal_check">
+                            Проверка на соответствие законодательству РФ
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Анализировать</button>
+            </form>
+
+            <div id="progress-section" style="display: none;">
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <p id="progress-text">Идет анализ договора...</p>
+            </div>
+
+            <div id="error-message" class="error-message" style="display: none;"></div>
+        </div>
+
+        <div id="result-section" class="result-section" style="display: none;">
+            <h2>Результат анализа</h2>
+            <div id="result-content"></div>
+            <div class="result-actions">
+                <button onclick="exportToWord()" class="btn btn-primary">Скачать в Word</button>
+                <button onclick="copyToClipboard()" class="btn btn-secondary">Копировать</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+    <script>
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
