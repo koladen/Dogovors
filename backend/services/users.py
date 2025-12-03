@@ -97,6 +97,45 @@ def update_user(username: str, password: Optional[str] = None,
 
     return False
 
+def delete_user(username: str) -> tuple[bool, str]:
+    """
+    Удалить пользователя.
+
+    Args:
+        username: Имя пользователя для удаления
+
+    Returns:
+        Кортеж (успех, сообщение)
+    """
+    data = read_json(USERS_FILE, {"users": []})
+    users = data.get("users", [])
+
+    # Проверить существование пользователя
+    user_index = None
+    for i, user in enumerate(users):
+        if user["username"] == username:
+            user_index = i
+            break
+
+    if user_index is None:
+        return False, "Пользователь не найден"
+
+    # Проверить, что не удаляем последнего администратора
+    user_to_delete = users[user_index]
+    if user_to_delete["role"] == "admin":
+        admin_count = sum(1 for u in users if u["role"] == "admin")
+        if admin_count <= 1:
+            return False, "Невозможно удалить последнего администратора"
+
+    # Удалить пользователя
+    users.pop(user_index)
+    data["users"] = users
+
+    if write_json(USERS_FILE, data):
+        return True, "Пользователь успешно удален"
+    else:
+        return False, "Ошибка при сохранении изменений"
+
 def verify_credentials(username: str, password: str) -> Optional[Dict]:
     """
     Проверить учетные данные пользователя.

@@ -60,6 +60,7 @@ def track_tokens(username: str, prompt_tokens: int, completion_tokens: int):
     user_stats["completion_tokens"] += completion_tokens
     user_stats["requests_count"] += 1
     user_stats["cost_usd"] += cost
+    user_stats["last_used"] = datetime.now().isoformat()
 
     write_json(TOKENS_FILE, stats)
 
@@ -73,23 +74,20 @@ def format_stats_for_display(stats: Dict) -> Dict:
     Returns:
         Отформатированная статистика
     """
-    users_list = []
+    formatted_users = {}
     for username, user_stats in stats.get("users", {}).items():
-        users_list.append({
-            "username": username,
+        formatted_users[username] = {
             "prompt_tokens": user_stats["prompt_tokens"],
             "completion_tokens": user_stats["completion_tokens"],
             "requests_count": user_stats["requests_count"],
-            "cost_usd": round(user_stats["cost_usd"], 2)
-        })
-
-    # Сортировать по количеству токенов (убывание)
-    users_list.sort(key=lambda x: x["prompt_tokens"] + x["completion_tokens"], reverse=True)
+            "cost_usd": round(user_stats["cost_usd"], 4),
+            "last_used": user_stats.get("last_used", "")
+        }
 
     return {
         "total_prompt_tokens": stats.get("total_prompt_tokens", 0),
         "total_completion_tokens": stats.get("total_completion_tokens", 0),
-        "total_cost_usd": round(stats.get("total_cost_usd", 0.0), 2),
-        "users": users_list,
+        "total_cost_usd": round(stats.get("total_cost_usd", 0.0), 4),
+        "users": formatted_users,
         "last_updated": stats.get("last_updated", "")
     }

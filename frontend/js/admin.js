@@ -112,6 +112,7 @@ function renderUsersTable(users) {
                 <td><span class="${roleClass}">${roleText}</span></td>
                 <td>
                     <button onclick="editUser('${user.username}')" class="btn btn-secondary btn-small">Редактировать</button>
+                    <button onclick="deleteUser('${user.username}')" class="btn btn-danger btn-small">Удалить</button>
                 </td>
             </tr>
         `;
@@ -209,6 +210,29 @@ async function editUser(username) {
             loadUsers();
         } else {
             showNotification(data.error || 'Ошибка обновления', 'error');
+        }
+    } catch (error) {
+        showNotification('Ошибка сети', 'error');
+    }
+}
+
+async function deleteUser(username) {
+    if (!confirm(`Вы действительно хотите удалить пользователя "${username}"?\n\nЭто действие нельзя отменить.`)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/api/admin/users/${username}`, {
+            method: 'DELETE'
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showNotification('Пользователь удален', 'success');
+            loadUsers(); // Перезагрузить список пользователей
+        } else {
+            showNotification(data.error || 'Ошибка удаления', 'error');
         }
     } catch (error) {
         showNotification('Ошибка сети', 'error');
@@ -534,7 +558,7 @@ function renderTokenStats(stats) {
                             <td>${username}</td>
                             <td>${(userStats.prompt_tokens + userStats.completion_tokens).toLocaleString()}</td>
                             <td>$${userStats.cost_usd.toFixed(4)}</td>
-                            <td>${new Date(userStats.last_used).toLocaleString('ru-RU')}</td>
+                            <td>${userStats.last_used ? new Date(userStats.last_used).toLocaleString('ru-RU') : 'Неизвестно'}</td>
                         </tr>
                     `).join('')}
                 </tbody>

@@ -1,11 +1,12 @@
 from typing import Optional, Tuple
-from openai import OpenAI
+import asyncio
+from openai import AsyncOpenAI
 from backend.services.llm_config import get_llm_config, get_current_llm_type
 from backend.services.prompts import get_prompt
 from backend.services.tokens import track_tokens
 from backend.services.logger import log_error
 
-def analyze_contract(text: str, analysis_type: str, username: str) -> Tuple[Optional[str], Optional[str]]:
+async def analyze_contract(text: str, analysis_type: str, username: str) -> Tuple[Optional[str], Optional[str]]:
     """
     Анализировать договор через LLM.
 
@@ -26,13 +27,13 @@ def analyze_contract(text: str, analysis_type: str, username: str) -> Tuple[Opti
     llm_type = get_current_llm_type()
 
     if llm_type == "deepseek":
-        return call_deepseek_api(prompt, text, username)
+        return await call_deepseek_api(prompt, text, username)
     elif llm_type == "lmstudio":
-        return call_lmstudio_api(prompt, text, username)
+        return await call_lmstudio_api(prompt, text, username)
     else:
         return None, f"Неизвестный тип LLM: {llm_type}"
 
-def call_deepseek_api(prompt: str, text: str, username: str) -> Tuple[Optional[str], Optional[str]]:
+async def call_deepseek_api(prompt: str, text: str, username: str) -> Tuple[Optional[str], Optional[str]]:
     """
     Вызвать DeepSeek API.
 
@@ -53,8 +54,8 @@ def call_deepseek_api(prompt: str, text: str, username: str) -> Tuple[Optional[s
         if not api_key:
             return None, "API ключ DeepSeek не настроен"
 
-        # Создать клиент OpenAI (совместимость с DeepSeek)
-        client = OpenAI(
+        # Создать асинхронный клиент OpenAI (совместимость с DeepSeek)
+        client = AsyncOpenAI(
             api_key=api_key,
             base_url=base_url,
             timeout=60.0
@@ -66,8 +67,8 @@ def call_deepseek_api(prompt: str, text: str, username: str) -> Tuple[Optional[s
             {"role": "user", "content": f"Проанализируйте следующий договор:\n\n{text}"}
         ]
 
-        # Вызов API
-        response = client.chat.completions.create(
+        # Вызов API асинхронно
+        response = await client.chat.completions.create(
             model="deepseek-chat",
             messages=messages,
             temperature=0.7,
@@ -89,7 +90,7 @@ def call_deepseek_api(prompt: str, text: str, username: str) -> Tuple[Optional[s
         log_error(username, "deepseek_api_call", error_msg)
         return None, error_msg
 
-def call_lmstudio_api(prompt: str, text: str, username: str) -> Tuple[Optional[str], Optional[str]]:
+async def call_lmstudio_api(prompt: str, text: str, username: str) -> Tuple[Optional[str], Optional[str]]:
     """
     Вызвать LM Studio API.
 
@@ -106,8 +107,8 @@ def call_lmstudio_api(prompt: str, text: str, username: str) -> Tuple[Optional[s
         base_url = config.get("lmstudio_base_url", "http://localhost:1234/v1")
         model = config.get("lmstudio_model", "deepseek-coder")
 
-        # Создать клиент OpenAI (совместимость с LM Studio)
-        client = OpenAI(
+        # Создать асинхронный клиент OpenAI (совместимость с LM Studio)
+        client = AsyncOpenAI(
             api_key="not-needed",  # LM Studio не требует ключ
             base_url=base_url,
             timeout=180.0  # Увеличенный таймаут для локальной обработки
@@ -119,8 +120,8 @@ def call_lmstudio_api(prompt: str, text: str, username: str) -> Tuple[Optional[s
             {"role": "user", "content": f"Проанализируйте следующий договор:\n\n{text}"}
         ]
 
-        # Вызов API
-        response = client.chat.completions.create(
+        # Вызов API асинхронно
+        response = await client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=0.7,

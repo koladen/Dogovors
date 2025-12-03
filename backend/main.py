@@ -18,7 +18,7 @@ from backend.services.queue import request_queue
 from backend.models.schemas import AnalyzeResponse, ExportRequest
 from backend.services.logger import log_user_action, log_error
 from backend.services.settings import get_max_file_size_bytes
-from backend.services.users import get_all_users, create_user, update_user
+from backend.services.users import get_all_users, create_user, update_user, delete_user
 from backend.models.schemas import UserCreate, UserUpdate
 from backend.services.prompts import get_all_prompts, save_prompt, reset_prompt
 from backend.models.schemas import PromptSaveRequest, PromptResetRequest
@@ -166,6 +166,32 @@ async def login(request: Request, credentials: LoginRequest):
             message="Неверный логин или пароль"
         )
 
+from backend.services.auth import remove_ip_authorization
+
+@app.post("/api/logout")
+async def logout(request: Request):
+    """
+    Выход пользователя - удалить авторизацию IP-адреса.
+    """
+    ip = get_client_ip(request)
+
+    # Получить пользователя перед удалением авторизации для логирования
+    user = get_user_by_ip(ip)
+
+    if user:
+        # Удалить авторизацию IP
+        success = remove_ip_authorization(ip)
+
+        if success:
+            # Логировать выход
+            log_user_action(user["username"], "logout", f"IP: {ip}")
+            return {"success": True, "message": "Выход выполнен успешно"}
+        else:
+            return {"success": False, "error": "Ошибка при выходе"}
+    else:
+        # IP не был авторизован
+        return {"success": True, "message": "IP не был авторизован"}
+
 # ===== АДМИН-ПАНЕЛЬ - УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ =====
 
 @app.get("/api/admin/users")
@@ -228,6 +254,35 @@ async def admin_update_user(
         return {
             "success": False,
             "error": "Пользователь не найден"
+        }
+
+@app.delete("/api/admin/users/{username}")
+async def admin_delete_user(
+    username: str,
+    user: dict = Depends(require_admin)
+):
+    """
+    Удалить пользователя (только для admin).
+    """
+    # Проверить, что пользователь не пытается удалить самого себя
+    if username == user["username"]:
+        return {
+            "success": False,
+            "error": "Невозможно удалить собственный аккаунт"
+        }
+
+    success, message = delete_user(username)
+
+    if success:
+        log_user_action(user["username"], "delete_user", f"Удален пользователь: {username}")
+        return {
+            "success": True,
+            "message": message
+        }
+    else:
+        return {
+            "success": False,
+            "error": message
         }
 
 # ===== АДМИН-ПАНЕЛЬ - ПРОМПТЫ =====
@@ -353,7 +408,7 @@ async def analyze_document(
 
             # ===== АНАЛИЗ ЧЕРЕЗ LLM =====
 
-            result, llm_error = analyze_contract(text, analysis_type, username)
+            result, llm_error = await analyze_contract(text, analysis_type, username)
 
             if llm_error:
                 log_error(username, "llm_analyze", llm_error)

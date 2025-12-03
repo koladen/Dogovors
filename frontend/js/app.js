@@ -28,6 +28,13 @@ async function checkAuth() {
 }
 
 async function checkAuthAndRedirect() {
+    // Не проверяем авторизацию автоматически при выходе
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('logout') === 'true') {
+        console.log('Пропускаем проверку авторизации после выхода');
+        return;
+    }
+
     const isAuth = await checkAuth();
 
     if (window.location.pathname.includes('login.html')) {
@@ -75,10 +82,86 @@ async function handleLogin(event) {
 
 // ===== ВЫХОД =====
 
-function logout() {
-    // В нашей системе достаточно просто перенаправить на логин
-    // IP будет оставаться авторизованным, но пользователь может войти под другим аккаунтом
-    window.location.href = '/static/login.html';
+async function logout() {
+    console.log('=== НАЧАЛО ПРОЦЕССА ВЫХОДА ===');
+    console.log('Текущий URL:', window.location.href);
+    console.log('Протокол:', window.location.protocol);
+    console.log('API_BASE:', API_BASE);
+    console.log('URL для запроса:', `${API_BASE}/api/logout`);
+
+    // Проверка, что страница открыта через HTTP/HTTPS
+    if (window.location.protocol === 'file:') {
+        alert('Приложение должно открываться через веб-сервер (http://), а не как локальный файл (file://)');
+        console.error('Страница открыта как file:// - запросы к localhost невозможны');
+        return;
+    }
+
+    try {
+        // Показываем индикатор выхода
+        const logoutBtn = document.querySelector('button[onclick="logout()"]');
+        console.log('Найдена кнопка выхода:', logoutBtn);
+        if (logoutBtn) {
+            logoutBtn.disabled = true;
+            logoutBtn.textContent = 'Выход...';
+        }
+
+        console.log('Отправка запроса на выход...');
+
+        // Отправляем запрос на сервер с timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 секунд timeout
+
+        const response = await fetch(`${API_BASE}/api/logout`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        console.log('Ответ сервера получен:', response.status, response.statusText);
+
+        if (response.ok) {
+            const data = await response.json();
+            console.log('Данные ответа:', data);
+            console.log('Выход выполнен успешно');
+        } else {
+            console.error('HTTP ошибка:', response.status, response.statusText);
+            try {
+                const errorText = await response.text();
+                console.error('Тело ошибки:', errorText);
+            } catch (e) {
+                console.error('Не удалось прочитать тело ошибки');
+            }
+            alert('Ошибка при выходе: ' + response.status + ' ' + response.statusText);
+            return; // Не перенаправляем при ошибке
+        }
+
+    } catch (error) {
+        console.error('Ошибка сети при выходе:', error);
+        if (error.name === 'AbortError') {
+            alert('Превышено время ожидания ответа сервера (5 секунд)');
+        } else if (error.message.includes('fetch')) {
+            alert('Не удалось подключиться к серверу. Убедитесь, что:\n1. Сервер запущен (python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000)\n2. Страница открыта через http://localhost:8000/static/, а не как file://');
+        } else {
+            alert('Ошибка сети при выходе: ' + error.message);
+        }
+        return; // Не перенаправляем при ошибке
+    }
+
+    // Теперь перенаправляем на страницу логина с параметром logout=true
+    console.log('Перенаправление на страницу логина...');
+    window.location.href = '/static/login.html?logout=true';
+    console.log('=== КОНЕЦ ПРОЦЕССА ВЫХОДА ===');
+}
+
+// ===== ПЕРЕХОД В АДМИН-ПАНЕЛЬ =====
+
+function goToAdmin() {
+    console.log('Redirecting to admin panel...');
+    window.location.href = '/static/admin.html';
 }
 
 // ===== ИНИЦИАЛИЗАЦИЯ ГЛАВНОЙ СТРАНИЦЫ =====
@@ -95,6 +178,22 @@ async function initApp() {
     const usernameDisplay = document.getElementById('username-display');
     if (usernameDisplay) {
         usernameDisplay.textContent = `Пользователь: ${currentUser.username}`;
+    }
+
+    // Показать кнопку админ-панели для администраторов
+    const adminButton = document.getElementById('admin-button');
+    console.log('Admin button check:', {
+        adminButton: !!adminButton,
+        currentUser: currentUser,
+        role: currentUser?.role,
+        isAdmin: currentUser?.role === 'admin'
+    });
+
+    if (adminButton && currentUser && currentUser.role === 'admin') {
+        console.log('Setting admin button to visible');
+        adminButton.style.visibility = 'visible';
+    } else {
+        console.log('Admin button conditions not met');
     }
 
     // Добавить обработчик формы
