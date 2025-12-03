@@ -277,6 +277,10 @@ async function exportToWord() {
         return;
     }
 
+    // Получить отрендеренный HTML из result-content вместо сырого Markdown
+    const resultContent = document.getElementById('result-content');
+    const htmlContent = resultContent ? resultContent.innerHTML : currentAnalysisResult;
+
     const filename = currentFilename ? currentFilename.replace(/\.[^/.]+$/, "") + '_анализ' : 'Анализ_договора';
 
     try {
@@ -286,7 +290,8 @@ async function exportToWord() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                content: currentAnalysisResult,
+                content: htmlContent,
+                content_type: 'html', // Указываем тип контента
                 filename: filename
             })
         });

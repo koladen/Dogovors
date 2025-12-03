@@ -450,7 +450,7 @@ async def export_to_word(
     """
     try:
         # Создать Word документ
-        doc_io = create_word_document(data.content, data.filename)
+        doc_io = create_word_document(data.content, data.filename, getattr(data, 'content_type', 'markdown'))
 
         # Логировать экспорт
         log_user_action(user["username"], "export", f"Файл: {data.filename}.docx")

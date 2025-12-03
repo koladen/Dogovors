@@ -53,6 +53,7 @@ class AnalyzeResponse(BaseModel):
 class ExportRequest(BaseModel):
     content: str
     filename: str = "Анализ_договора"
+    content_type: str = "markdown"  # 'markdown' или 'html'
 
 # ===== ПРОМПТЫ =====
 
