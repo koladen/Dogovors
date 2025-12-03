@@ -456,11 +456,15 @@ async def export_to_word(
         log_user_action(user["username"], "export", f"Файл: {data.filename}.docx")
 
         # Вернуть файл
+        # Кодировать filename для поддержки кириллицы и других не-ASCII символов
+        import urllib.parse
+        encoded_filename = urllib.parse.quote(f"{data.filename}.docx", encoding='utf-8')
+
         return StreamingResponse(
             doc_io,
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             headers={
-                "Content-Disposition": f'attachment; filename="{data.filename}.docx"'
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
             }
         )
     except Exception as e:

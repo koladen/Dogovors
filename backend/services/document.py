@@ -257,6 +257,11 @@ def create_word_document(content: str, filename: str = "Анализ_догов�
     from docx.shared import Pt, RGBColor
     from io import BytesIO
     import re
+    import tempfile
+    import os
+
+    # Очистить filename от проблемных символов
+    filename = re.sub(r'[^\w\-_\.]', '_', filename, flags=re.UNICODE)
 
     doc = Document()
 
@@ -288,9 +293,25 @@ def create_word_document(content: str, filename: str = "Анализ_догов�
         # Обычный текст
         doc.add_paragraph(line)
 
-    # Сохранить в BytesIO
-    doc_io = BytesIO()
-    doc.save(doc_io)
-    doc_io.seek(0)
+    # Сохранить через временный файл для избежания проблем с кодировкой
+    tmp_fd, tmp_path = tempfile.mkstemp(suffix='.docx')
+    try:
+        # Закрыть файловый дескриптор
+        os.close(tmp_fd)
 
-    return doc_io
+        # Сохранить документ
+        doc.save(tmp_path)
+
+        # Прочитать файл обратно в BytesIO
+        with open(tmp_path, 'rb') as f:
+            doc_io = BytesIO(f.read())
+            doc_io.seek(0)
+
+        return doc_io
+    finally:
+        # Удалить временный файл
+        try:
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+        except OSError:
+            pass  # Игнорировать ошибки удаления
