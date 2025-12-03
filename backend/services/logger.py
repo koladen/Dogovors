@@ -59,23 +59,23 @@ def log_error(username: str, action: str, error: str):
     message = f"USER:{username} | ACTION:{action} | ERROR:{error}"
     logger.error(message)
 
-def get_logs(log_type: str = "app", limit: int = 100) -> list:
+def get_logs(type: str = "app", limit: int = 100) -> list:
     """
     Получить последние записи из лога.
 
     Args:
-        log_type: Тип лога ("app" или "error")
+        type: Тип лога ("app" - все действия, "error" - только ошибки)
         limit: Количество записей
 
     Returns:
         Список записей лога
     """
-    if log_type == "app":
-        log_file = LOGS_DIR / "app.log"
-    elif log_type == "error":
+    print(f"DEBUG: get_logs called with type='{type}', limit={limit}")  # DEBUG
+
+    if type == "error":
         log_file = LOGS_DIR / "error.log"
     else:
-        return []
+        log_file = LOGS_DIR / "app.log"
 
     try:
         if not log_file.exists():
@@ -84,7 +84,11 @@ def get_logs(log_type: str = "app", limit: int = 100) -> list:
         with open(log_file, "r", encoding="utf-8") as f:
             lines = f.readlines()
 
+        print(f"DEBUG: Read {len(lines)} lines from {log_file}")  # DEBUG
+
         # Вернуть последние limit строк
-        return [line.strip() for line in lines[-limit:]]
+        result = [line.strip() for line in lines[-limit:]]
+        print(f"DEBUG: Returning {len(result)} {type} logs")  # DEBUG
+        return result
     except IOError:
         return []

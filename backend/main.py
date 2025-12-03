@@ -533,14 +533,14 @@ async def admin_get_tokens_stats(user: dict = Depends(require_admin)):
 
 @app.get("/api/admin/logs")
 async def admin_get_logs(
-    log_type: str = "app",
+    type: str = "app",
     limit: int = 100,
     user: dict = Depends(require_admin)
 ):
     """
     Получить логи системы (только для admin).
     """
-    logs = get_logs(log_type, limit)
+    logs = get_logs(type, limit)
     return {"success": True, "logs": logs}
 
 if __name__ == "__main__":
