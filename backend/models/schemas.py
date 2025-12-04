@@ -48,6 +48,14 @@ class AnalyzeResponse(BaseModel):
     queued: Optional[bool] = False
     message: Optional[str] = None
 
+# ===== ТРАНСКРИБАЦИЯ =====
+
+class TranscribeResponse(BaseModel):
+    success: bool
+    transcription: Optional[str] = None
+    protocol: Optional[str] = None
+    error: Optional[str] = None
+
 # ===== ЭКСПОРТ =====
 
 class ExportRequest(BaseModel):
@@ -62,11 +70,11 @@ class PromptsResponse(BaseModel):
     prompts: dict
 
 class PromptSaveRequest(BaseModel):
-    prompt_type: Literal["summary", "legal_check"]
+    prompt_type: Literal["summary", "legal_check", "meeting_protocol"]
     content: str
 
 class PromptResetRequest(BaseModel):
-    prompt_type: Literal["summary", "legal_check"]
+    prompt_type: Literal["summary", "legal_check", "meeting_protocol"]
 
 # ===== НАСТРОЙКИ LLM =====
 
@@ -89,6 +97,7 @@ class SettingsResponse(BaseModel):
 
 class SettingsUpdate(BaseModel):
     max_file_size_mb: Optional[int] = None
+    max_audio_file_size_mb: Optional[int] = None
     max_queue_size: Optional[int] = None
     max_concurrent_requests: Optional[int] = None
     rate_limit_per_minute: Optional[int] = None

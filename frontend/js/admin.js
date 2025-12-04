@@ -277,6 +277,15 @@ function renderPromptsEditor(prompts) {
                 <button onclick="resetPrompt('legal_check')" class="btn btn-secondary">Сбросить к исходному</button>
             </div>
         </div>
+
+        <div class="prompt-editor">
+            <h4>Промпт для протокола совещания</h4>
+            <textarea id="prompt-meeting_protocol">${prompts.meeting_protocol || ''}</textarea>
+            <div class="prompt-actions">
+                <button onclick="savePrompt('meeting_protocol')" class="btn btn-success">Сохранить</button>
+                <button onclick="resetPrompt('meeting_protocol')" class="btn btn-secondary">Сбросить к исходному</button>
+            </div>
+        </div>
     `;
 }
 
@@ -454,6 +463,11 @@ function renderSettings(settings) {
             </div>
 
             <div class="form-group">
+                <label>Максимальный размер аудиофайла (МБ):</label>
+                <input type="number" id="max-audio-file-size" value="${settings.max_audio_file_size_mb || 100}" min="1" max="500">
+            </div>
+
+            <div class="form-group">
                 <label>Макс. одновременных обработок:</label>
                 <input type="number" id="max-concurrent" value="${settings.max_concurrent_requests || 5}" min="1" max="20">
             </div>
@@ -481,6 +495,7 @@ function renderSettings(settings) {
 async function saveSettings() {
     const settings = {
         max_file_size_mb: parseInt(document.getElementById('max-file-size').value),
+        max_audio_file_size_mb: parseInt(document.getElementById('max-audio-file-size').value),
         max_concurrent_requests: parseInt(document.getElementById('max-concurrent').value),
         max_queue_size: parseInt(document.getElementById('max-queue').value),
         rate_limit_per_minute: parseInt(document.getElementById('rate-limit').value)

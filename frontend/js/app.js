@@ -5,6 +5,8 @@ const API_BASE = '';
 let currentUser = null;
 let currentAnalysisResult = null;
 let currentFilename = null;
+let currentTranscription = null;
+let currentProtocol = null;
 
 // ===== ПРОВЕРКА АВТОРИЗАЦИИ =====
 
@@ -164,6 +166,212 @@ function goToAdmin() {
     window.location.href = '/static/admin.html';
 }
 
+
+// ===== ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК =====
+
+function showMainTab(tabName) {
+    // Скрыть все вкладки контента
+    document.getElementById('contracts-tab').style.display = 'none';
+    document.getElementById('transcription-tab').style.display = 'none';
+    
+    // Убрать active со всех кнопок
+    document.querySelectorAll('.main-tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Показать выбранную вкладку
+    if (tabName === 'contracts') {
+        document.getElementById('contracts-tab').style.display = 'block';
+    } else if (tabName === 'transcription') {
+        document.getElementById('transcription-tab').style.display = 'block';
+    }
+    
+    // Активировать кнопку
+    event.target.classList.add('active');
+}
+
+
+// ===== ТРАНСКРИБАЦИЯ АУДИО =====
+
+async function handleTranscribe(event) {
+    event.preventDefault();
+    
+    const audioInput = document.getElementById('audio-file');
+    const errorDiv = document.getElementById('transcribe-error');
+    const spinnerDiv = document.getElementById('transcribe-spinner');
+    const resultSection = document.getElementById('transcription-result-section');
+    
+    // Скрыть ошибки и результаты
+    errorDiv.style.display = 'none';
+    resultSection.style.display = 'none';
+    
+    // Показать спиннер
+    spinnerDiv.style.display = 'block';
+    
+    const formData = new FormData();
+    formData.append('audio_file', audioInput.files[0]);
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/transcribe`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        // Скрыть спиннер
+        spinnerDiv.style.display = 'none';
+        
+        if (data.success) {
+            currentTranscription = data.transcription;
+            currentProtocol = data.protocol;
+            
+            // Отобразить транскрипцию
+            document.getElementById('transcription-content').textContent = data.transcription || '';
+            
+            // Отобразить протокол (может быть пустым)
+            const protocolContent = document.getElementById('protocol-content');
+            if (data.protocol) {
+                protocolContent.innerHTML = marked.parse(data.protocol);
+            } else {
+                protocolContent.textContent = data.error || 'Протокол не сгенерирован';
+            }
+            
+            resultSection.style.display = 'block';
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            errorDiv.textContent = data.error || 'Ошибка транскрибации';
+            errorDiv.style.display = 'block';
+        }
+    } catch (error) {
+        spinnerDiv.style.display = 'none';
+        errorDiv.textContent = 'Ошибка сети при транскрибации';
+        errorDiv.style.display = 'block';
+    }
+}
+
+
+// ===== ЭКСПОРТ ТРАНСКРИПЦИИ =====
+
+async function exportTranscription() {
+    if (!currentTranscription) {
+        alert('Нет транскрипции для экспорта');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/export-transcript`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content: currentTranscription,
+                filename: 'Транскрипция',
+                content_type: 'markdown'
+            })
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            // Извлечь имя файла из заголовка
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = 'Транскрипция.docx';
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename\*=UTF-8''(.+)/);
+                if (match) {
+                    filename = decodeURIComponent(match[1]);
+                }
+            }
+            
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } else {
+            alert('Ошибка при экспорте транскрипции');
+        }
+    } catch (error) {
+        alert('Ошибка при экспорте транскрипции');
+    }
+}
+
+async function exportProtocol() {
+    if (!currentProtocol) {
+        alert('Нет протокола для экспорта');
+        return;
+    }
+    
+    const protocolHtml = document.getElementById('protocol-content').innerHTML;
+    
+    try {
+        const response = await fetch(`${API_BASE}/api/export-protocol`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                content: protocolHtml,
+                filename: 'Протокол',
+                content_type: 'html'
+            })
+        });
+        
+        if (response.ok) {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = 'Протокол.docx';
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename\*=UTF-8''(.+)/);
+                if (match) {
+                    filename = decodeURIComponent(match[1]);
+                }
+            }
+            
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } else {
+            alert('Ошибка при экспорте протокола');
+        }
+    } catch (error) {
+        alert('Ошибка при экспорте протокола');
+    }
+}
+
+function copyTranscription() {
+    if (!currentTranscription) {
+        alert('Нет транскрипции для копирования');
+        return;
+    }
+    
+    navigator.clipboard.writeText(currentTranscription).then(() => {
+        alert('Транскрипция скопирована в буфер обмена');
+    }).catch(() => {
+        alert('Ошибка при копировании');
+    });
+}
+
+function copyProtocol() {
+    if (!currentProtocol) {
+        alert('Нет протокола для копирования');
+        return;
+    }
+    
+    navigator.clipboard.writeText(currentProtocol).then(() => {
+        alert('Протокол скопирован в буфер обмена');
+    }).catch(() => {
+        alert('Ошибка при копировании');
+    });
+}
+
 // ===== ИНИЦИАЛИЗАЦИЯ ГЛАВНОЙ СТРАНИЦЫ =====
 
 async function initApp() {
@@ -209,6 +417,23 @@ async function initApp() {
             const fileName = document.getElementById('file-name');
             if (this.files.length > 0) {
                 fileName.textContent = this.files[0].name;
+            }
+        });
+    }
+    
+    // Добавить обработчик формы транскрибации
+    const transcribeForm = document.getElementById('transcribeForm');
+    if (transcribeForm) {
+        transcribeForm.addEventListener('submit', handleTranscribe);
+    }
+    
+    // Добавить обработчик выбора аудиофайла
+    const audioInput = document.getElementById('audio-file');
+    if (audioInput) {
+        audioInput.addEventListener('change', function() {
+            const audioFileName = document.getElementById('audio-file-name');
+            if (this.files.length > 0) {
+                audioFileName.textContent = this.files[0].name;
             }
         });
     }

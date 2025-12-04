@@ -30,6 +30,10 @@ from backend.services.logger import get_logs
 from backend.models.schemas import SettingsUpdate
 import tempfile
 from pathlib import Path
+from backend.services.transcription import validate_audio_file, transcribe_audio
+from backend.services.llm import generate_meeting_protocol
+from backend.services.settings import get_max_audio_file_size_bytes
+from backend.models.schemas import TranscribeResponse
 
 # Создание приложения
 app = FastAPI(
@@ -437,6 +441,149 @@ async def analyze_document(
     finally:
         # ===== ОСВОБОЖДЕНИЕ СЛОТА В ОЧЕРЕДИ =====
         await request_queue.release()
+
+# ===== ТРАНСКРИБАЦИЯ АУДИО =====
+
+@app.post("/api/transcribe", response_model=TranscribeResponse)
+@limiter.limit("2/minute")
+async def transcribe_audio_endpoint(
+    request: Request,
+    audio_file: UploadFile = File(...),
+    user: dict = Depends(require_auth)
+):
+    """
+    Транскрибировать аудиофайл и сгенерировать протокол.
+    """
+    username = user["username"]
+    
+    # Получить максимальный размер
+    from backend.services.settings import get_settings
+    settings = get_settings()
+    max_size_mb = settings.get("max_audio_file_size_mb", 100)
+    
+    # Читаем содержимое файла
+    file_content = await audio_file.read()
+    file_size = len(file_content)
+    
+    # Валидация файла
+    is_valid, error = validate_audio_file(audio_file.filename, file_size, max_size_mb)
+    if not is_valid:
+        log_error(username, "audio_validation", error)
+        return TranscribeResponse(success=False, error=error)
+    
+    # Сохраняем во временный файл
+    file_extension = Path(audio_file.filename).suffix.lower()
+    
+    with tempfile.NamedTemporaryFile(delete=False, suffix=file_extension) as tmp_file:
+        tmp_file.write(file_content)
+        tmp_path = Path(tmp_file.name)
+    
+    try:
+        # Выполняем транскрибацию
+        transcription, trans_error = await transcribe_audio(tmp_path)
+        
+        if trans_error:
+            log_error(username, "transcription", trans_error)
+            return TranscribeResponse(success=False, error=trans_error)
+        
+        # Генерируем протокол
+        protocol, proto_error = await generate_meeting_protocol(transcription, username)
+        
+        if proto_error:
+            log_error(username, "protocol_generation", proto_error)
+            # Возвращаем хотя бы транскрипцию
+            return TranscribeResponse(
+                success=True, 
+                transcription=transcription, 
+                protocol=None,
+                error=f"Протокол не сгенерирован: {proto_error}"
+            )
+        
+        log_user_action(username, "transcribe", f"Файл: {audio_file.filename}")
+        
+        return TranscribeResponse(
+            success=True,
+            transcription=transcription,
+            protocol=protocol
+        )
+        
+    finally:
+        # Удаляем временный файл
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+
+
+@app.post("/api/export-transcript")
+async def export_transcript_to_word(
+    data: ExportRequest,
+    user: dict = Depends(require_auth)
+):
+    """
+    Экспортировать транскрипцию в Word документ.
+    """
+    try:
+        import urllib.parse
+        from datetime import datetime
+        
+        # Формируем имя файла с датой
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+        filename = f"Транскрипция_{timestamp}"
+        
+        doc_io = create_word_document(data.content, filename, 'markdown')
+        
+        log_user_action(user["username"], "export_transcript", f"Файл: {filename}.docx")
+        
+        encoded_filename = urllib.parse.quote(f"{filename}.docx", encoding='utf-8')
+        
+        return StreamingResponse(
+            doc_io,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+            }
+        )
+    except Exception as e:
+        error_msg = f"Ошибка при создании документа: {str(e)}"
+        log_error(user["username"], "export_transcript", error_msg)
+        return {"success": False, "error": error_msg}
+
+
+@app.post("/api/export-protocol")
+async def export_protocol_to_word(
+    data: ExportRequest,
+    user: dict = Depends(require_auth)
+):
+    """
+    Экспортировать протокол в Word документ.
+    """
+    try:
+        import urllib.parse
+        from datetime import datetime
+        
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M")
+        filename = f"Протокол_{timestamp}"
+        
+        doc_io = create_word_document(data.content, filename, 'markdown')
+        
+        log_user_action(user["username"], "export_protocol", f"Файл: {filename}.docx")
+        
+        encoded_filename = urllib.parse.quote(f"{filename}.docx", encoding='utf-8')
+        
+        return StreamingResponse(
+            doc_io,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+            }
+        )
+    except Exception as e:
+        error_msg = f"Ошибка при создании документа: {str(e)}"
+        log_error(user["username"], "export_protocol", error_msg)
+        return {"success": False, "error": error_msg}
+
 
 # ===== ЭКСПОРТ В WORD =====
 

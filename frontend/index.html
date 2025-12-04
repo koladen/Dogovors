@@ -17,6 +17,18 @@
         </div>
     </div>
 
+    <!-- Вкладки главной страницы -->
+    <div class="main-tabs">
+        <button class="main-tab-button active" onclick="showMainTab('contracts')">
+            📄 Анализ договоров
+        </button>
+        <button class="main-tab-button" onclick="showMainTab('transcription')">
+            🎤 Расшифровка аудио
+        </button>
+    </div>
+
+    <!-- Вкладка: Анализ договоров -->
+    <div id="contracts-tab" class="main-tab-content active">
     <div class="container">
         <div class="upload-section">
             <h2>Загрузить договор для анализа</h2>
@@ -64,6 +76,70 @@
             </div>
         </div>
     </div>
+    </div><!-- contracts-tab -->
+
+    <!-- Вкладка: Расшифровка аудио -->
+    <div id="transcription-tab" class="main-tab-content" style="display: none;">
+    <div class="container">
+        <div class="upload-section">
+            <h2>Загрузить аудио для расшифровки</h2>
+            
+            <form id="transcribeForm" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="audio-file">Выберите аудиофайл:</label>
+                    <input type="file" id="audio-file" name="audio_file" 
+                           accept=".mp3,.wav,.m4a,.flac,.aac,.ogg,.webm,.mp4,.mov,.avi" required>
+                    <span id="audio-file-name"></span>
+                    <small>Форматы: MP3, WAV, M4A, FLAC, AAC, OGG, WebM, MP4, MOV, AVI</small>
+                    <small>Язык: Русский (автоматически)</small>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Расшифровать</button>
+            </form>
+            
+            <div id="transcribe-spinner" style="display: none;">
+                <div class="spinner"></div>
+                <p>Идет транскрибация... Это может занять несколько минут.</p>
+            </div>
+            
+            <div id="transcribe-error" class="error-message" style="display: none;"></div>
+        </div>
+
+        <div id="transcription-result-section" style="display: none;">
+            <h2>Результат расшифровки</h2>
+            
+            <div class="result-block">
+                <h3>Транскрипция</h3>
+                <div id="transcription-content" class="result-content" style="white-space: pre-wrap;"></div>
+                <div class="result-actions">
+                    <button onclick="exportTranscription()" class="btn btn-primary">
+                        📥 Скачать (Word)
+                    </button>
+                    <button onclick="copyTranscription()" class="btn btn-secondary">
+                        📋 Копировать
+                    </button>
+                </div>
+            </div>
+            
+            <div class="result-block">
+                <h3>Протокол совещания</h3>
+                <div id="protocol-content" class="result-content"></div>
+                <div class="result-actions">
+                    <button onclick="exportProtocol()" class="btn btn-primary">
+                        📥 Скачать (Word)
+                    </button>
+                    <button onclick="copyProtocol()" class="btn btn-secondary">
+                        📋 Копировать
+                    </button>
+                </div>
+            </div>
+            
+            <p class="info-text">
+                ℹ️ Результаты не сохраняются на сервере. После закрытия страницы они будут потеряны.
+            </p>
+        </div>
+    </div>
+    </div><!-- transcription-tab -->
 
     <script src="/static/js/app.js"></script>
     <script>

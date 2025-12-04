@@ -16,6 +16,8 @@ def get_prompt(prompt_type: str) -> Optional[str]:
         file_path = PROMPTS_DIR / "summary_prompt.txt"
     elif prompt_type == "legal_check":
         file_path = PROMPTS_DIR / "legal_check_prompt.txt"
+    elif prompt_type == "meeting_protocol":
+        file_path = PROMPTS_DIR / "meeting_protocol_prompt.txt"
     else:
         return None
 
@@ -34,7 +36,8 @@ def get_all_prompts() -> Dict[str, str]:
     """
     return {
         "summary": get_prompt("summary") or "",
-        "legal_check": get_prompt("legal_check") or ""
+        "legal_check": get_prompt("legal_check") or "",
+        "meeting_protocol": get_prompt("meeting_protocol") or ""
     }
 
 def save_prompt(prompt_type: str, content: str) -> bool:
@@ -52,6 +55,8 @@ def save_prompt(prompt_type: str, content: str) -> bool:
         file_path = PROMPTS_DIR / "summary_prompt.txt"
     elif prompt_type == "legal_check":
         file_path = PROMPTS_DIR / "legal_check_prompt.txt"
+    elif prompt_type == "meeting_protocol":
+        file_path = PROMPTS_DIR / "meeting_protocol_prompt.txt"
     else:
         return False
 
@@ -78,6 +83,9 @@ def reset_prompt(prompt_type: str) -> Optional[str]:
     elif prompt_type == "legal_check":
         default_file = DEFAULTS_DIR / "legal_check_prompt.txt"
         current_file = PROMPTS_DIR / "legal_check_prompt.txt"
+    elif prompt_type == "meeting_protocol":
+        default_file = DEFAULTS_DIR / "meeting_protocol_prompt.txt"
+        current_file = PROMPTS_DIR / "meeting_protocol_prompt.txt"
     else:
         return None
 
